@@ -3,4 +3,5 @@
 #   config.gem "ambethia-recaptcha", :lib => "recaptcha/rails", :source => "http://gems.github.com"
 
 require 'net/http'
+require 'net/https'
 require 'recaptcha/rails'

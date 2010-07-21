@@ -3,6 +3,7 @@ require 'rails/version' # For getting the rails version constants
 require 'active_support/vendor' # For loading I18n
 require 'mocha'
 require 'net/http'
+require 'net/https'
 require File.dirname(__FILE__) + '/../lib/recaptcha'
 
 class RecaptchaVerifyTest < Test::Unit::TestCase
@@ -40,6 +41,14 @@ class RecaptchaVerifyTest < Test::Unit::TestCase
     expect_http_post(response_with_body("true\n"))
 
     assert @controller.verify_recaptcha
+    assert_nil @controller.flash[:recaptcha_error]
+  end
+
+  def test_returns_true_on_success_with_ssl
+    @expected_uri = URI.parse("https://#{Recaptcha::RECAPTCHA_VERIFY_SERVER}/verify")
+    expect_http_post(response_with_body("true\n"))
+
+    assert @controller.verify_recaptcha(:ssl => true)
     assert_nil @controller.flash[:recaptcha_error]
   end
   
