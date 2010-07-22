@@ -16,7 +16,7 @@ module Recaptcha
       if !options.is_a? Hash
         options = {:model => options}
       end
-      
+
       env = options[:env] || ENV['RAILS_ENV']
       return true if SKIP_VERIFY_ENV.include? env
       model = options[:model]
@@ -29,26 +29,14 @@ module Recaptcha
         recaptcha = nil
         Timeout::timeout(options[:timeout] || 3) do
           if ssl
-            url = URI.parse("https://#{RECAPTCHA_VERIFY_SERVER}/verify")
-            https = Net::HTTP.new(url.host, (url.port || 443))
-            https.use_ssl = true
-            if options[:ca_file] || CA_FILE
-              https.ca_file = options[:ca_file] || CA_FILE
-              https.verify_mode = OpenSSL::SSL::VERIFY_PEER
-              https.verify_depth = 5
-            else
-              https.verify_mode = OpenSSL::SSL::VERIFY_NONE
-            end
-            https.start do |http|
-              recaptcha = Net::HTTP.post_form url, {
-                "privatekey" => private_key,
-                "remoteip"   => request.remote_ip,
-                "challenge"  => params[:recaptcha_challenge_field],
-                "response"   => params[:recaptcha_response_field]
-              }
-            end
+            recaptcha = post_form URI.parse("https://#{RECAPTCHA_VERIFY_SERVER}/verify"), {
+              "privatekey" => private_key,
+              "remoteip"   => request.remote_ip,
+              "challenge"  => params[:recaptcha_challenge_field],
+              "response"   => params[:recaptcha_response_field]
+            }
           else
-            recaptcha = Net::HTTP.post_form URI.parse("http://#{RECAPTCHA_VERIFY_SERVER}/verify"), {
+            recaptcha = post_form URI.parse("http://#{RECAPTCHA_VERIFY_SERVER}/verify"), {
               "privatekey" => private_key,
               "remoteip"   => request.remote_ip,
               "challenge"  => params[:recaptcha_challenge_field],
@@ -68,7 +56,7 @@ module Recaptcha
           flash[:recaptcha_error] = nil
           return true
         end
-      rescue Timeout::Error 
+      rescue Timeout::Error
         flash[:recaptcha_error] = "recaptcha-not-reachable"
         if model
           model.valid?
@@ -79,5 +67,24 @@ module Recaptcha
         raise RecaptchaError, e.message, e.backtrace
       end
     end # verify_recaptcha
+
+
+    private
+    def post_form(url, params)
+      default_port = (url.scheme == 'https' ? 443 : 80)
+      https = Net::HTTP.new(url.host, (url.port || default_port))
+      https.use_ssl = (url.scheme == 'https')
+      if CA_FILE
+        https.ca_file = CA_FILE
+        https.verify_mode = OpenSSL::SSL::VERIFY_PEER
+        https.verify_depth = 5
+      else
+        https.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      end
+      req = Net::HTTP::Post.new(url.path)
+      req.set_form_data(params)
+      https.request(req)
+    end
+
   end # Verify
 end # Recaptcha

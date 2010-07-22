@@ -19,7 +19,7 @@ class RecaptchaVerifyTest < Test::Unit::TestCase
     @expected_post_data["remoteip"]   = @controller.request.remote_ip
     @expected_post_data["challenge"]  = "challenge"
     @expected_post_data["response"]   = "response"
-    
+
     @expected_uri = URI.parse("http://#{Recaptcha::RECAPTCHA_VERIFY_SERVER}/verify")
   end
 
@@ -33,10 +33,10 @@ class RecaptchaVerifyTest < Test::Unit::TestCase
   def test_should_return_false_when_key_is_invalid
     expect_http_post(response_with_body("false\ninvalid-site-private-key"))
 
-    assert !@controller.verify_recaptcha    
+    assert !@controller.verify_recaptcha
     assert_equal "invalid-site-private-key", @controller.flash[:recaptcha_error]
   end
-  
+
   def test_returns_true_on_success
     expect_http_post(response_with_body("true\n"))
 
@@ -51,10 +51,10 @@ class RecaptchaVerifyTest < Test::Unit::TestCase
     assert @controller.verify_recaptcha(:ssl => true)
     assert_nil @controller.flash[:recaptcha_error]
   end
-  
+
   def test_errors_should_be_added_to_model
     expect_http_post(response_with_body("false\nbad-news"))
-    
+
     errors = mock
     errors.expects(:add).with(:base, "Word verification response is incorrect, please try again.")
     model = mock(:valid? => false, :errors => errors)
@@ -83,21 +83,21 @@ class RecaptchaVerifyTest < Test::Unit::TestCase
   class TestController
     include Recaptcha::Verify
     attr_accessor :request, :params, :session, :flash
-    
+
     def initialize
       @session = {}
       @flash   = {}
     end
   end
-  
+
   def expect_http_post(response, options = {})
     unless options[:exception]
-      Net::HTTP.expects(:post_form).with(@expected_uri, @expected_post_data).returns(response)
+      @controller.expects(:post_form).with(@expected_uri, @expected_post_data).returns(response)
     else
-      Net::HTTP.expects(:post_form).raises response
+      @controller.expects(:post_form).raises response
     end
   end
-  
+
   def response_with_body(body)
     stub(:body => body)
   end
